@@ -6,6 +6,7 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 
 from models.payment import Payment
 from db import get_sqlalchemy_session
+import requests
 
 def create_payment(order_id: int, user_id: int, total_amount: float):
     """Insert payment with items in MySQL"""
@@ -43,6 +44,20 @@ def update_status_to_paid(payment_id: int):
         # Update the payment status
         payment.is_paid = True
         session.commit()
+
+        # Appel du service order via Krakend
+        order_response = requests.put(
+            "http://krakend:8080/store-manager-api/orders",
+            json={
+                "id": payment.order_id,
+                "is_paid": True
+            }
+        )
+
+        if order_response.status_code != 200:
+            raise Exception(
+                f"Erreur lors de la mise à jour de la commande: {order_response.text}"
+            )
         
         return {
             "payment_id": payment_id,
